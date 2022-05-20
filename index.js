@@ -1,26 +1,49 @@
-const fs = require('fs').promises;
-const path = require('path');
-const uuid = require('uuid');
+const operations = require('./contacts');
 
-const contactsPath = path.join(__dirname, './db/contacts.json');
+const { Command } = require("commander");
+const program = new Command();
+program
+  .option("-a, --action <type>", "choose action")
+  .option("-i, --id <type>", "user id")
+  .option("-n, --name <type>", "user name")
+  .option("-e, --email <type>", "user email")
+  .option("-p, --phone <type>", "user phone");
 
-const getContactsAll = async () => {
-    const contactsData = await fs.readFile(contactsPath, 'utf-8');
-    const data = JSON.parse(contactsData); 
-    return data;
-    
+program.parse(process.argv);
+
+const argv = program.opts();
+
+async function invokeAction({ action, id, name, email, phone }) {
+  switch (action) {
+    case "list":
+        const result = await operations.listContacts();
+
+        console.table(result);
+      break;
+
+    case "get":
+        const contact = await operations.getContactById(id);
+
+        console.table(contact);
+      break;
+
+    case "add":
+        await operations.addContact(name, email, phone);
+        const newResult = await operations.listContacts();
+
+        console.table(newResult);    
+      break;
+
+    case "remove":
+        await operations.removeContact(id);
+        const removeResult = await operations.listContacts();
+         
+        console.table(removeResult); 
+      break;
+
+    default:
+      console.warn("\x1B[31m Unknown action type!");
+  }
 }
-// getContactsAll().then(velue => console.log(velue));
 
-const contactsCreate = async (name, email, phone) => {
-    const newContact = {
-        id: uuid.v4(),
-        name: name,
-        email: email,
-        phone: phone,
-    };
-    const allContacts = await getContactsAll();
-    allContacts.push(newContact);
-    await fs.writeFile(contactsPath, JSON.stringify(allContacts));
-}
-contactsCreate('Yriu Blazhko', 'blazhko22@gmail.com', '(098) 985-5874')
+invokeAction(argv);
